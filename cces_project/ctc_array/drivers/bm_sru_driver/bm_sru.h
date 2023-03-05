@@ -64,4 +64,9 @@ void sru_config_sharc_sam_adau1452_master(void);
  */
 bool sru_config_spdif(uint8_t clock_divider);
 
+/*
+ * The configuration that sets multichannel amp's
+ */
+void sru_config_multichannel_amps(void);
+
 #endif //_BM_SRU_H
