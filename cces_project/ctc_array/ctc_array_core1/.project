@@ -50,6 +50,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/common</locationURI>
 		</link>
 		<link>
+			<name>src/multichannel_amp_drivers</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/multichannel_amp_drivers</locationURI>
+		</link>
+		<link>
 			<name>src/drivers/bm_audio_flow_driver</name>
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/drivers/bm_audio_flow_driver</locationURI>
@@ -68,6 +73,11 @@
 			<name>src/drivers/bm_sysctrl_driver</name>
 			<type>2</type>
 			<locationURI>PARENT-1-PROJECT_LOC/drivers/bm_sysctrl_driver</locationURI>
+		</link>
+		<link>
+			<name>src/drivers/bm_twi_driver</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/drivers/bm_twi_driver</locationURI>
 		</link>
 		<link>
 			<name>src/drivers/bm_uart_driver</name>
