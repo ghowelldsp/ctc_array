@@ -46,6 +46,9 @@
 // Hooks into user processing functions
 #include "../callback_audio_processing.h"
 
+// fir accel
+#include "fir_accel_drivers/fir_accel_mic_array.h"
+
 #if (USE_FAUST_ALGORITHM_CORE1)
 #include "audio_framework_faust_extension_core1.h"
 #endif
@@ -882,6 +885,9 @@ void audioframework_initialize() {
 	audioflow_init_sport_dma(&SPR4_MCAMP_CH_Config);
 	audioflow_init_sport_dma(&SPR5_MCAMP_CH_Config);
 	audioflow_init_sport_dma(&SPR6_MCAMP_CH_Config);
+
+	// set up fir accelerators
+	fir_accelerator_initialise();
 
     // Set up interrupt handler for our audio callback (set at a lower interrupt priority)
     adi_int_InstallHandler(INTR_TRU0_INT4, (ADI_INT_HANDLER_PTR)audioframework_audiocallback_handler, NULL, true);

@@ -23,6 +23,9 @@
 // Prototypes for this file
 #include "callback_audio_processing.h"
 
+// fir accel
+#include "fir_accel_drivers/fir_accel_mic_array.h"
+
 /*
  *
  * Available Processing Power
@@ -244,6 +247,14 @@ void processaudio_callback(void) {
 
 	}
 
+	pFirInputData[0].pInputData = (void*)audiochannel_spdif_0_left_in;
+	pFirInputData[1].pInputData = (void*)audiochannel_spdif_0_right_in;
+
+	fir_accelerator_run(pfirAccConfig1, pFirInputData);
+
+	float *pOutBuffTmp1 = (float*)pfirAccConfig1[0].pBuffers->pOutputBuff;
+	float *pOutBuffTmp2 = (float*)pfirAccConfig1[1].pBuffers->pOutputBuff;
+
 	// Otherwise, perform our C-based block processing here!
 	for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
 
@@ -256,8 +267,11 @@ void processaudio_callback(void) {
 		audiochannel_0_left_out[i] = audiochannel_spdif_0_left_in[i];
 		audiochannel_0_right_out[i] = audiochannel_spdif_0_right_in[i];
 
-		mcamp_ch0[i] = audiochannel_spdif_0_left_in[i];
-		mcamp_ch1[i] = audiochannel_spdif_0_right_in[i];
+		mcamp_ch0[i] = pOutBuffTmp1[i];
+		mcamp_ch1[i] = pOutBuffTmp2[i];
+
+//		mcamp_ch0[i] = audiochannel_spdif_0_left_in[i];
+//		mcamp_ch1[i] = audiochannel_spdif_0_right_in[i];
 
 		mcamp_ch2[i] = audiochannel_spdif_0_left_in[i];
 		mcamp_ch3[i] = audiochannel_spdif_0_right_in[i];
