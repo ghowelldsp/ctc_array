@@ -224,6 +224,12 @@ void processaudio_setup(void) {
  * is 300,000 cycles or 300,000/32 or 9,375 per sample of audio
  */
 
+// float firInputBuffTemp[128] =
+// {
+// 	#include "fir_accel_drivers/firInput.dat"
+// };
+// int x = 0;
+
 // When debugging audio algorithms, helpful to comment out this pragma for more linear single stepping.
 #pragma optimize_for_speed
 void processaudio_callback(void) {
@@ -247,13 +253,14 @@ void processaudio_callback(void) {
 
 	}
 
-	pFirInputData[0].pInputData = (void*)audiochannel_spdif_0_left_in;
-	pFirInputData[1].pInputData = (void*)audiochannel_spdif_0_right_in;
+//	pFirInputData[0].pInputData = (void*)audiochannel_spdif_0_left_in;
+//	pFirInputData[1].pInputData = (void*)audiochannel_spdif_0_right_in;
 
-	fir_accelerator_run(pfirAccConfig1, pFirInputData);
+	fir_accelerator_run(pfirAccConfigL1, audiochannel_spdif_0_left_in);
+//	fir_accelerator_run(pfirAccConfigL1, &firInputBuffTemp[x]);
 
-	float *pOutBuffTmp1 = (float*)pfirAccConfig1[0].pBuffers->pOutputBuff;
-	float *pOutBuffTmp2 = (float*)pfirAccConfig1[1].pBuffers->pOutputBuff;
+	float *pOutBuffTmp1 = *(pfirAccConfigL1->pBuffers->pOutputBuffers+0);
+//	float *pOutBuffTmp2 = (float*)pfirAccConfigL1->pBuffers->pOutputBuffers[1];
 
 	// Otherwise, perform our C-based block processing here!
 	for (int i = 0; i < AUDIO_BLOCK_SIZE; i++) {
@@ -268,10 +275,10 @@ void processaudio_callback(void) {
 		audiochannel_0_right_out[i] = audiochannel_spdif_0_right_in[i];
 
 		mcamp_ch0[i] = pOutBuffTmp1[i];
-		mcamp_ch1[i] = pOutBuffTmp2[i];
+//		mcamp_ch1[i] = pOutBuffTmp2[i];
 
 //		mcamp_ch0[i] = audiochannel_spdif_0_left_in[i];
-//		mcamp_ch1[i] = audiochannel_spdif_0_right_in[i];
+		mcamp_ch1[i] = audiochannel_spdif_0_right_in[i];
 
 		mcamp_ch2[i] = audiochannel_spdif_0_left_in[i];
 		mcamp_ch3[i] = audiochannel_spdif_0_right_in[i];

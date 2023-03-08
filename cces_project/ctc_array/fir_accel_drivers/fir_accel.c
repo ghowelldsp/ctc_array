@@ -30,23 +30,24 @@ static uint32_t TranslateAddr (uint32_t  MemAddr);
 /*------------------- GLOBAL FUNCTIONS ---------------------------*/
 
 /**
- * @brief 	Initalises the fir accelerator
+ * @brief 	Initalises the fir accelerator for a single configuration
  *
  * @param
  *
  * @return  Fir accel result
  */
-ADI_FIR_ACC_RESULT fir_accel_init(ADI_FIR_ACC_BUFF *pBuffers,
-								  ADI_FIR_ACC_TCB *pTCB,
-								  FIRA_INFO *pFirInfo1,
-								  ADI_FIR_ACC_CONFIG *pFirAccConfig)
+ADI_FIR_ACC_RESULT fir_accel_init(FIRA_CONFIG *pFirAccConfig,
+								  FIRA_TCB *pTCB,
+								  FIRA_BUFFERS *pBuffers,
+								  FIRA_INFO *pFirInfo)
 {
 	// write control 1 data TODO - this writes multiple times
 	*pREG_FIR0_CTL1 = firCtrl1;
 
-	uint8_t chIdx;
-
-	for (chIdx=0; chIdx<FIR_ACC_NUM_CHANNELS; chIdx++)
+	/*
+	 * TCB
+	 */
+	for (int chIdx=0; chIdx<FIR_ACC_NUM_CHANNELS; chIdx++)
 	{
 		// load in the default settings
 		pTCB[chIdx] = firAccDefaultTcb;
@@ -62,24 +63,20 @@ ADI_FIR_ACC_RESULT fir_accel_init(ADI_FIR_ACC_BUFF *pBuffers,
 		}
 
 		// update base address of registers
-		pTCB[chIdx].pCoeffIndex = (void*)TranslateAddr((uint32_t)pBuffers[chIdx].pCoeffBuff);
-		pTCB[chIdx].pOutputBase = (void*)TranslateAddr((uint32_t)pBuffers[chIdx].pOutputBuff);
-		pTCB[chIdx].pOutputIndex = (void*)TranslateAddr((uint32_t)pBuffers[chIdx].pOutputBuff);
-		pTCB[chIdx].pInputBase = (void*)TranslateAddr((uint32_t)pBuffers[chIdx].pInputBuff);
-		pTCB[chIdx].pInputIndex = (void*)TranslateAddr((uint32_t)pBuffers[chIdx].pInputBuff);
-
-		// add buffers and tcb to config
-		pFirAccConfig[chIdx].pInfo = &pFirInfo1[chIdx];
-		pFirAccConfig[chIdx].pBuffers = &pBuffers[chIdx];
-		pFirAccConfig[chIdx].pTCB = &pTCB[chIdx];
-
+		pTCB[chIdx].pCoeffIndex = (void*)TranslateAddr((uint32_t)*(pBuffers->pCoeffBuffers+chIdx));
+		pTCB[chIdx].pOutputBase = (void*)TranslateAddr((uint32_t)*(pBuffers->pOutputBuffers+chIdx));
+		pTCB[chIdx].pOutputIndex = (void*)TranslateAddr((uint32_t)*(pBuffers->pOutputBuffers+chIdx));
+		pTCB[chIdx].pInputBase = (void*)TranslateAddr((uint32_t)pBuffers->pInputBuffer);
+		pTCB[chIdx].pInputIndex = (void*)TranslateAddr((uint32_t)pBuffers->pInputBuffer);
 	};
+
+	// add buffers and tcb to config
+	pFirAccConfig->pInfo = pFirInfo;
+	pFirAccConfig->pBuffers = pBuffers;
+	pFirAccConfig->pTCB = pTCB;
 
 	return ADI_FIR_ACC_RESULT_SUCCESS;
 }
-
-
-#include "drivers/bm_event_logging_driver/bm_event_logging.h"
 
 /**
  * @brief 	Enables the fir accelerator interrupt
@@ -88,60 +85,55 @@ ADI_FIR_ACC_RESULT fir_accel_init(ADI_FIR_ACC_BUFF *pBuffers,
  *
  * @return  Fir accel result
  */
-ADI_FIR_ACC_RESULT fira_add_input_data(ADI_FIR_ACC_CONFIG *pFirAccConfig, ADI_FIR_ACC_IN_DATA *pFirInputData)
+ADI_FIR_ACC_RESULT fira_add_input_data(FIRA_CONFIG *pFiraConfig,
+		 	 	 	 	 	 	 	   float *pFirInputData)
 {
 	uint32_t startIdx, endIdx;
 	uint32_t diff = 0;
 
-	float tempVal;
+	// determine start address of x[n] and end index of buffer
+	startIdx = ((uint32_t)pFiraConfig->pTCB[1].pInputIndex) + pFiraConfig->pInfo->delayLen;
+	endIdx = ((uint32_t)pFiraConfig->pTCB[1].pInputBase) + pFiraConfig->pInfo->inputBuffLen;
 
-	for (int i=0; i<FIR_ACC_NUM_CHANNELS; i++)
+	// check if start index is passed end of buffer, modify to start of buffer if so
+	if (startIdx >= endIdx)
 	{
-		// determine start address of x[n] and end index of buffer
-		startIdx = ((uint32_t)pFirAccConfig[i].pTCB->pInputIndex) + pFirAccConfig[i].pInfo->delayLen;
-		endIdx = ((uint32_t)pFirAccConfig[i].pTCB->pInputBase) + pFirAccConfig[i].pInfo->inputBuffLen;
+		diff = startIdx - endIdx;
+		startIdx = ((uint32_t)pFiraConfig->pTCB[0].pInputBase) + diff;
+	}
+	else
+	{
+		diff = startIdx - (uint32_t)pFiraConfig->pTCB[1].pInputBase;
+	}
 
-		// check if start index is passed end of buffer, modify to start of buffer if so
-		if (startIdx >= endIdx)
+	float *pInputXn = pFiraConfig->pBuffers->pInputBuffer + diff;
+	float *pInputBase = pFiraConfig->pBuffers->pInputBuffer;
+
+	// determine if x[n] will run over end index limit
+	if (startIdx+FIR_ACC_AUDIO_BLOCK_SIZE > endIdx)
+	{
+		diff = endIdx - startIdx;
+
+		// add input data to input buffers
+		for (int idx = 0; idx < FIR_ACC_AUDIO_BLOCK_SIZE; idx++)
 		{
-			diff = startIdx - endIdx;
-			startIdx = ((uint32_t)pFirAccConfig[i].pTCB->pInputBase) + diff;
-		}
-		else
-		{
-			diff = startIdx - (uint32_t)pFirAccConfig[i].pTCB->pInputBase;
-		}
-
-		float *pXnIdx = (float*)pFirAccConfig[i].pBuffers->pInputBuff + diff;
-		float *pInputBase = (float*)pFirAccConfig[i].pBuffers->pInputBuff;
-		float *pInputData = (float*)pFirInputData[0].pInputData;
-
-		// determine if x[n] will run over end index limit
-		if (startIdx+FIR_ACC_AUDIO_BLOCK_SIZE > endIdx)
-		{
-			diff = endIdx - startIdx;
-
-			// add input data to input buffers
-			for (int idx = 0; idx < FIR_ACC_AUDIO_BLOCK_SIZE; idx++)
+			if (idx>=diff)
 			{
-				if (idx>=diff)
-				{
-					pInputBase[idx-diff] = pInputData[idx];
-				}
-				else
-				{
+				pInputBase[idx-diff] = pFirInputData[idx];
+			}
+			else
+			{
 
-					pXnIdx[idx] = pInputData[idx];
-				}
+				pInputXn[idx] = pFirInputData[idx];
 			}
 		}
-		else
+	}
+	else
+	{
+		// add input data to input buffers
+		for (int idx = 0; idx < FIR_ACC_AUDIO_BLOCK_SIZE; idx++)
 		{
-			// add input data to input buffers
-			for (int idx = 0; idx < FIR_ACC_AUDIO_BLOCK_SIZE; idx++)
-			{
-				pXnIdx[idx] = pInputData[idx];
-			}
+			pInputXn[idx] = pFirInputData[idx];
 		}
 	}
 
@@ -173,9 +165,9 @@ ADI_FIR_ACC_RESULT fir_enable_it(void)
  *
  * @return  Fir accel result
  */
-ADI_FIR_ACC_RESULT fir_enable(ADI_FIR_ACC_CONFIG *pFirAccConfig)
+ADI_FIR_ACC_RESULT fir_enable(FIRA_CONFIG *pFirAccConfig)
 {
-	*pREG_FIR0_CHNPTR = TranslateAddr((uint32_t)&pFirAccConfig[0].pTCB->nFirControl2);
+	*pREG_FIR0_CHNPTR = TranslateAddr((uint32_t)&pFirAccConfig->pTCB[0].nFirControl2);
 
 	*pREG_FIR0_CTL1 |= FIR_FIRCTL1_EN_ENABLE | FIR_FIRCTL1_DMAEN_ENABLE;
 
@@ -203,19 +195,16 @@ ADI_FIR_ACC_RESULT fir_disable(void)
  *
  * @return  Fir accel result
  */
-ADI_FIR_ACC_RESULT fir_accel_reset(ADI_FIR_ACC_CONFIG *pFirAccConfig)
+ADI_FIR_ACC_RESULT fir_accel_reset(FIRA_CONFIG *pFirAccConfig)
 {
 	// disable the fir accelerator
 	fir_disable();
 
 	// reset the input buffer
-	uint8_t chIdx;
-
-//	for (chIdx=0; chIdx<FIR_ACC_NUM_CHANNELS; chIdx++)
-//	{
-//		// set up next tcb
-//		pFirAccConfig[chIdx].pTCB->pInputIndex = (void*)TranslateAddr((uint32_t)pFirAccConfig[chIdx].pBuffers->pInputBuff);
-//	};
+	for (int chIdx=0; chIdx<FIR_ACC_NUM_CHANNELS; chIdx++)
+	{
+		pFirAccConfig->pTCB[chIdx].pInputIndex = (void*)TranslateAddr((uint32_t)pFirAccConfig->pBuffers->pInputBuffer);
+	};
 
 	return ADI_FIR_ACC_RESULT_SUCCESS;
 }

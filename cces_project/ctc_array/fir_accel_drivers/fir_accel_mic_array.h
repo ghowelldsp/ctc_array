@@ -23,14 +23,12 @@ extern "C" {
 /*------------------- TYPEDEFS -----------------------------------*/
 /*------------------- EXPORTED VARIABLES -------------------------*/
 
-extern ADI_FIR_ACC_CONFIG *pfirAccConfig1;
-
-extern ADI_FIR_ACC_IN_DATA *pFirInputData;
+extern FIRA_CONFIG *pfirAccConfigL1;
 
 /*------------------- GLOBAL FUNCTION PROTOTYPES -----------------*/
 
 void fir_accelerator_initialise(void);
-void fir_accelerator_run(ADI_FIR_ACC_CONFIG *pFirAccConfig, ADI_FIR_ACC_IN_DATA *pFirInputData);
+void fir_accelerator_run(FIRA_CONFIG *pFirAccConfig, float *pFirInputData);
 
 #ifdef __cplusplus
 }

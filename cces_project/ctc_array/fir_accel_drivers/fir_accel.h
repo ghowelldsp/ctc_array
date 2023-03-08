@@ -53,60 +53,53 @@ typedef enum
     ADI_FIR_ACC_RESULT_FAILED,                 /*!< API call failed */
 } ADI_FIR_ACC_RESULT;
 
-typedef struct AdiFirAccBuffers
+typedef struct FiraInfo
 {
-	void*          	pCoeffBuff;
-	void*          	pOutputBuff;
-	void*          	pInputBuff;
-
-} ADI_FIR_ACC_BUFF;
-
-typedef struct FirAInfo
-{
-	uint32_t 		windowLen;
-	uint32_t 		delayLen;
-	uint32_t       	inputBuffLen;
+	uint32_t 			windowLen;
+	uint32_t 			delayLen;
+	uint32_t       		inputBuffLen;
 
 } FIRA_INFO;
 
-typedef struct AdiFirAccInputData
+typedef struct FiraBuffers
 {
-	void*          pInputData;
+	float				*pInputBuffer;
+	float				**pOutputBuffers;
+	float				**pCoeffBuffers;
+} FIRA_BUFFERS;
 
-} ADI_FIR_ACC_IN_DATA;
-
-typedef struct AdiFirAccTCB
+typedef struct FiraTCB
 {
     /* Chain Pointer */
-    void*          pNextTCB;
+    void*          		pNextTCB;
 
     /* Coefficient Buffer */
-    uint32_t       nCoeffCount;
-    int32_t        nCoeffModify;
-    void*          pCoeffIndex;
+    uint32_t       		nCoeffCount;
+    int32_t        		nCoeffModify;
+    void*          		pCoeffIndex;
 
     /* Output Circular Buffer */
-    void*          pOutputBase;
-    uint32_t       nOutputCount;
-    int32_t        nOutputModify;
-    void* volatile pOutputIndex;
+    void*          		pOutputBase;
+    uint32_t       		nOutputCount;
+    int32_t        		nOutputModify;
+    void* volatile 		pOutputIndex;
 
     /* Input Circular Buffer */
-    void*          pInputBase;
-    uint32_t       nInputCount;
-    int32_t        nInputModify;
-    void* volatile pInputIndex;
+    void*          		pInputBase;
+    uint32_t       		nInputCount;
+    int32_t        		nInputModify;
+    void* volatile 		pInputIndex;
 
     /* Registers */
     uint32_t       nFirControl2;
-} ADI_FIR_ACC_TCB;
+} FIRA_TCB;
 
-typedef struct AdiFirAccConfig
+typedef struct FiraConfig
 {
 	FIRA_INFO			*pInfo;
-	ADI_FIR_ACC_BUFF 	*pBuffers;
-	ADI_FIR_ACC_TCB 	*pTCB;
-} ADI_FIR_ACC_CONFIG;
+	FIRA_TCB 			*pTCB;
+	FIRA_BUFFERS		*pBuffers;
+} FIRA_CONFIG;
 
 typedef struct _AdiFirAccItHandler
 {
@@ -117,18 +110,16 @@ typedef struct _AdiFirAccItHandler
 /*------------------- EXPORTED VARIABLES -------------------------*/
 /*------------------- GLOBAL FUNCTION PROTOTYPES -----------------*/
 
-int fir_test(void);
-
-ADI_FIR_ACC_RESULT fir_accel_init(ADI_FIR_ACC_BUFF *pBuffers,
-								  ADI_FIR_ACC_TCB *pTCB,
-								  FIRA_INFO *pFirInfo1,
-								  ADI_FIR_ACC_CONFIG *pFirAccConfig);
-ADI_FIR_ACC_RESULT fira_add_input_data(ADI_FIR_ACC_CONFIG *pFirAccConfig,
-									   ADI_FIR_ACC_IN_DATA *pFirInputData);
+ADI_FIR_ACC_RESULT fir_accel_init(FIRA_CONFIG *pFirAccConfig,
+								  FIRA_TCB *pTCB,
+								  FIRA_BUFFERS *pBuffers,
+								  FIRA_INFO *pFirInfo);
+ADI_FIR_ACC_RESULT fira_add_input_data(FIRA_CONFIG *pFiraConfig,
+									   float *pFirInputData);
 ADI_FIR_ACC_RESULT fir_enable_it(void);
-ADI_FIR_ACC_RESULT fir_enable(ADI_FIR_ACC_CONFIG *pFirAccConfig);
+ADI_FIR_ACC_RESULT fir_enable(FIRA_CONFIG *pFirAccConfig);
 ADI_FIR_ACC_RESULT fir_disable(void);
-ADI_FIR_ACC_RESULT fir_accel_reset(ADI_FIR_ACC_CONFIG *pFirAccConfig);
+ADI_FIR_ACC_RESULT fir_accel_reset(FIRA_CONFIG *pFirAccConfig);
 ADI_FIR_ACC_RESULT fir_wait_till_done(void);
 
 #ifdef __cplusplus

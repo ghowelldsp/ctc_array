@@ -50,7 +50,7 @@ static uint32_t firCtrl1 =  (FIR_CTR1_CH_VAL << FIR_POS_FIRCTL1_CH) |
 							(FIR_CTR1_RND_VAL << FIR_POS_FIRCTL1_RND) |
 							0;
 
-static ADI_FIR_ACC_TCB firAccDefaultTcb =
+static FIRA_TCB firAccDefaultTcb =
 {
 	/* Coefficient Buffer */
 	.nCoeffCount	= FIR_ACC_TAP_LENGTH,
@@ -73,7 +73,7 @@ static ADI_FIR_ACC_TCB firAccDefaultTcb =
 					  0
 };
 
-static ADI_FIR_ACC_TCB firAccTcbs[FIR_ACC_NUM_CHANNELS];
+static FIRA_TCB firAccTcbs[FIR_ACC_NUM_CHANNELS];
 
 #ifdef __cplusplus
 }
